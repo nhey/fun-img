@@ -1,3 +1,4 @@
 # Functional Images
-Following chapter 7 of The Fun of Programming by Jeremy Gibbons and Oege de
+Chapter 7 of The Fun of Programming by Jeremy Gibbons and Oege de
 Moor.
+![checkers](test.png)
