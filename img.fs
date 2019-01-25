@@ -45,6 +45,5 @@ let toBitmap (img : Region) scale width height =
       in BitmapUtil.setPixel c (x,y) bmp
   bmp
 
-// toBitmap (altRings <||> checker) 10.0 600 600
-toBitmap (altRings <||> polarChecker 10) 60.0 600 600
+toBitmap (polarChecker 40) 60.0 600 600
 |> toPngFile "test.png"
