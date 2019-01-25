@@ -19,19 +19,41 @@ let floori x = int (floor x)
 let checker : Region =
   fun (x,y) -> even (floori x + floori y)
 
-let distO : Point -> float =
-  fun (x,y) -> System.Math.Sqrt (x**2.0 + y**2.0)
+let distO ((x,y) : Point) : float =
+  System.Math.Sqrt (x**2.0 + y**2.0)
 let altRings : Region =
-  fun (x,y) -> even (floori (distO (x,y)))
+  even << floori << distO
 
 // polar
 type PolarPoint = float * float
-let toPolar : Point -> PolarPoint =
-  fun (x,y) -> (distO (x,y), atan2 y x)
+let toPolar (x,y) : PolarPoint = (distO (x,y), atan2 y x)
 let polarChecker n : Region =
   let sc (p, θ) = (p, θ * (float n) / System.Math.PI)
   checker << sc << toPolar
 
+// spatial transforms
+type Transform = Point -> Point
+type Vector = float * float
+let translateP ((dx,dy) : Vector) : Transform =
+  fun (x,y) -> (x + dx, y + dy)
+let rotateP θ : Transform =
+  fun (x,y) -> (x * cos θ - y * sin θ, y * cos θ + x * sin θ)
+let swirlP r : Transform =
+  fun (x,y) -> rotateP (distO (x,y) * 2.0*System.Math.PI/r) (x,y)
+// transforms should be applied like
+//   transform << img^-1
+// to avoid finding inverses, we instead indvidually compensate s.t.
+//   img << transform
+// produces the same effect
+type 'a Filter = 'a Image -> 'a Image
+let translate (dx,dy) : 'a Filter =
+  fun img -> img << translateP (-dx,-dy)
+let rotate θ : 'a Filter =
+  fun img -> img << rotateP (-θ)
+let swirl r : 'a Filter =
+  // here it is apparant that we don't make the angle θ negative
+  // but what does it matter -- it's a swirl
+  fun img -> img << swirlP (-r)
 
 (* konkretisering; fra abstrakt billede til bitmap *)
 let toBitmap (img : Region) scale width height =
@@ -45,5 +67,5 @@ let toBitmap (img : Region) scale width height =
       in BitmapUtil.setPixel c (x,y) bmp
   bmp
 
-toBitmap (polarChecker 40) 60.0 600 600
+toBitmap (swirl 33.3 checker) 10.0 600 600
 |> toPngFile "test.png"
