@@ -72,6 +72,9 @@ let lift1 (o : 'a -> 'b) (f : 'p -> 'a) : 'p -> 'b =
 let lift3 (o : 'a -> 'b -> 'c -> 'd) (f1 : 'p -> 'a) f2 f3 : 'p -> 'd =
   fun p -> o (f1 p) (f2 p) (f3 p)
 
+let cond : Region -> Region -> Region -> Region =
+  lift3 (fun a b c -> if a then b else c)
+
 (* konkretisering; fra abstrakt billede til bitmap *)
 let regionToBitmap (img : Region) scale width height =
   let bmp = BitmapUtil.bmp (width, height)
@@ -84,7 +87,7 @@ let regionToBitmap (img : Region) scale width height =
       in BitmapUtil.setPixel c (x,y) bmp
   bmp
 
-regionToBitmap (swirl 33.3 checker) 60.0 600 600
+regionToBitmap (cond (fun (x,y) -> (y - x) < 0.0) (checker) (swirl -33.3 checker)) 20.0 600 600
 |> toPngFile "test.png"
 printfn "File written: 'test.png'"
 
