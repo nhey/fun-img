@@ -72,11 +72,6 @@ let lift1 (o : 'a -> 'b) (f : 'p -> 'a) : 'p -> 'b =
 let lift3 (o : 'a -> 'b -> 'c -> 'd) (f1 : 'p -> 'a) f2 f3 : 'p -> 'd =
   fun p -> o (f1 p) (f2 p) (f3 p)
 
-// val lift3 : 'a Image -> 'b Image -> 'c Image -> 'd Image
-//let lift3 (f : ('a Image -> 'b Image -> 'c Image -> 'd Image)) : 'a Image -> 'b Image -> 'c Image -> 'd Image =
-// let lift3 (f : 'a -> 'b -> 'c -> 'd) (point : 'p) : ('p -> 'a) -> ('p -> 'b) -> ('p -> 'c) -> ('p -> 'd) =
-//   fun aImg bImg cImg -> f (aImg point) (bImg point) (cImg point)
-
 (* konkretisering; fra abstrakt billede til bitmap *)
 let regionToBitmap (img : Region) scale width height =
   let bmp = BitmapUtil.bmp (width, height)
