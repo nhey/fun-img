@@ -16,3 +16,8 @@ let toPngFile (fname : string) (bmp : Bitmap) =
 
 let bmp ((width, height) : int * int) : Bitmap = new Bitmap(width, height)
 let setPixel (c : Color) (x,y) (bmp : Bitmap) = bmp.SetPixel(x,y,c)
+
+type Anchor =
+  | Center
+  | TopLeft
+

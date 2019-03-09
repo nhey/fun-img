@@ -42,8 +42,8 @@ let translateP ((dx,dy) : Vector) : Transform =
   fun (x,y) -> (x + dx, y + dy)
 let rotateP θ : Transform =
   fun (x,y) -> (x * cos θ - y * sin θ, y * cos θ + x * sin θ)
-let swirlP r : Transform =
-  fun (x,y) -> rotateP (distO (x,y) * 2.0*System.Math.PI/r) (x,y)
+let swirlP radius : Transform =
+  fun (x,y) -> rotateP (distO (x,y) * 2.0*System.Math.PI/radius) (x,y)
 // The application of spatial transforms to images (Filters):
 // transforms should be applied like
 //   transform << img^-1
@@ -56,11 +56,11 @@ let translate (dx,dy) : 'a Filter =
   fun img -> img << translateP (-dx,-dy)
 let rotate θ : 'a Filter =
   fun img -> img << rotateP (-θ)
-let swirl r : 'a Filter =
+let swirl radius : 'a Filter =
   // here we do not compensate by making the
   // angle θ in the swirlP function negative;
   // but what does it matter -- it's a swirl
-  fun img -> img << swirlP (-r)
+  fun img -> img << swirlP (-radius)
 
 // pointwise lifting
 // lets us apply an operation (function o) pointwise on one or
@@ -103,29 +103,53 @@ let shiftXor (dx : float) : bool Filter =
   fun reg -> xorR (shift dx reg) (shift (-dx) reg)
 
 (* konkretisering; fra abstrakt billede til bitmap *)
-let regionToBitmap (img : Region) scale width height =
+let regionToBitmap scale width height origoAnchor (img : Region) =
+  // anchor (0,0) at center or top left
+  let anchor (x,y) =
+    match origoAnchor with
+    | BitmapUtil.Center -> (x - width/2, y - height/2)
+    | BitmapUtil.TopLeft -> (x,y)
+
+  // construct bitmap
   let bmp = BitmapUtil.bmp (width, height)
   for x in [0..width-1] do
     for y in [0..height-1] do
-      // centreer omkring (0,0)
-      let p_x = float (x - width/2) * scale / float width
-      let p_y = float (y - height/2) * scale / float height
-      let c = img (p_x, p_y) |> BitmapUtil.boolToColor
-      in BitmapUtil.setPixel c (x,y) bmp
+      let ax, ay = anchor (x,y)
+      // apply scale
+      let p_x = float ax * scale / float width
+      let p_y = float ay * scale / float height
+      let color = img (p_x, p_y) |> BitmapUtil.boolToColor
+      in BitmapUtil.setPixel color (x,y) bmp
   bmp
 
-regionToBitmap (cond (fun (x,y) -> (y - x) < 0.0) (checker) (swirl -33.3 checker)) 20.0 600 600
-|> toPngFile "test.png"
-printfn "File written: 'test.png'"
+// shiftXor 2.6 altRings
+// swirl 333.0 (shiftXor 2.6 altRings)
+// swirl 150.0 (shiftXor 2.6 altRings)
+// shiftXor 2.6 altRings
+// cond (fun (x,y) -> (y - x) < 0.0) checker (swirl -33.3 checker)
+// |> regionToBitmap 20.0 600 600 Center
+// |> regionToBitmap 400.0 600 600 TopLeft
+// |> toPngFile "test.png"
+// printfn "File written: 'test.png'"
 
-// for i in [0..80] do
-//   regionToBitmap (checker |> swirl (float (40-i))) 10.0 600 600
-//   |> toPngFile (sprintf "test%02i.png" i)
-// // ImageMagick for gif generation
-// let makeGif = "-delay 10 -loop 0 *.png test.gif"
-// let patrolCycle =  "test.gif -coalesce -duplicate 1,-2-1 -quiet -layers OptimizePlus  -loop 0 test.gif"
-// let conv cmd =
-//   use p = System.Diagnostics.Process.Start("convert", cmd)
-//   p.WaitForExit()
-// conv makeGif
-// conv patrolCycle
+// Write multiple images
+printfn "Generating images..."
+let generateImg =
+  fun i ->
+    shiftXor (0.0 + float i * 0.05) altRings
+    |> regionToBitmap 400.0 600 600 TopLeft
+let images = Array.Parallel.init 80 generateImg
+
+printfn "Writing images to disk..."
+Array.iteri (fun i img -> toPngFile (sprintf "test%02i.png" i) img) images
+
+// ImageMagick for gif generation
+printfn "Creating gif with ImageMagick..."
+let makeGif = "-comment 'hello' -delay 10 -loop 0 test*.png test.gif"
+let patrolCycle =  "test.gif -coalesce -duplicate 1,-2-1 -quiet -layers OptimizePlus  -loop 0 test.gif"
+let convert cmd =
+  use p = System.Diagnostics.Process.Start("convert", cmd)
+  p.WaitForExit()
+convert makeGif
+// convert patrolCycle
+printfn "File written: test.gif"
