@@ -12,7 +12,7 @@ type Region = bool Image
 let (<<>>) : float -> float -> bool =
   fun x y -> abs(y-x) < 0.05
 // combine regions
-let (<||>) : Region -> Region -> Region =
+let combine : Region -> Region -> Region =
   fun r r' -> fun (x,y) -> r (x,y) || r' (x,y)
 
 // helper functions for images
@@ -69,11 +69,38 @@ let swirl r : 'a Filter =
 let lift1 (o : 'a -> 'b) (f : 'p -> 'a) : 'p -> 'b =
   fun p -> o (f p)
 
+let lift2 (o : 'a -> 'b -> 'c) (f1 : 'p -> 'a) f2 : 'p -> 'c =
+  fun p -> o (f1 p) (f2 p)
+
 let lift3 (o : 'a -> 'b -> 'c -> 'd) (f1 : 'p -> 'a) f2 f3 : 'p -> 'd =
   fun p -> o (f1 p) (f2 p) (f3 p)
 
 let cond : Region -> Region -> Region -> Region =
   lift3 (fun a b c -> if a then b else c)
+
+// Region algebra
+
+let universeR : Region = fun p -> true
+let emptyR : Region = fun p -> false
+
+let complementR : Region -> Region =
+  lift1 (not)
+
+let (<&&>) : Region -> Region -> Region =
+  lift2 (&&)
+
+let (<||>) : Region -> Region -> Region =
+  lift2 (||)
+
+let xorR : Region -> Region -> Region =
+  lift2 (fun a b -> a && (not b) || (not a) && b)
+
+let (</>) : Region -> Region -> Region =
+  fun r r' -> r <&&> (complementR r')
+
+let shiftXor (dx : float) : bool Filter =
+  let shift d = translate (d,0.0)
+  fun reg -> xorR (shift dx reg) (shift (-dx) reg)
 
 (* konkretisering; fra abstrakt billede til bitmap *)
 let regionToBitmap (img : Region) scale width height =
