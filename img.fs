@@ -132,20 +132,27 @@ let regionToBitmap scale width height origoAnchor (img : Region) =
 // |> toPngFile "test.png"
 // printfn "File written: 'test.png'"
 
+// Animationer
+type Time = float
+type 'a Animation = Time -> 'a Image
 // Write multiple images
 printfn "Generating images..."
-let generateImg =
+let anim : bool Animation =
+  fun dt -> shiftXor (0.0 + dt) altRings
+
+let generateImgi =
   fun i ->
-    shiftXor (0.0 + float i * 0.05) altRings
+    anim (float i * 0.05)
     |> regionToBitmap 400.0 600 600 TopLeft
-let images = Array.Parallel.init 80 generateImg
+
+let images = Array.Parallel.init 80 generateImgi
 
 printfn "Writing images to disk..."
 Array.iteri (fun i img -> toPngFile (sprintf "test%02i.png" i) img) images
 
 // ImageMagick for gif generation
 printfn "Creating gif with ImageMagick..."
-let makeGif = "-comment 'hello' -delay 10 -loop 0 test*.png test.gif"
+let makeGif = "-delay 10 -loop 0 test*.png test.gif"
 let patrolCycle =  "test.gif -coalesce -duplicate 1,-2-1 -quiet -layers OptimizePlus  -loop 0 test.gif"
 let convert cmd =
   use p = System.Diagnostics.Process.Start("convert", cmd)
