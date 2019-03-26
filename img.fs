@@ -1,4 +1,4 @@
-open BitmapUtil
+module Imaging
 
 (* abstrakt definition af et billede *)
 // Et billede er en funktion fra et punkt i planen til en type (fx en farve).
@@ -86,10 +86,9 @@ let lift2 (op : 'a -> 'b -> 'c) (f1 : 'p -> 'a) f2 : 'p -> 'c =
 let lift3 (op : 'a -> 'b -> 'c -> 'd) (f1 : 'p -> 'a) f2 f3 : 'p -> 'd =
   fun p -> op (f1 p) (f2 p) (f3 p)
 
-
 // the cond operator is quite powerful:
-// take three regions select, r1, and r2. Use select to combine r1 and r2
-// into a new region that is r1 whenever select and r2 otherwise.
+// given three regions r1, r2, and select. Use select to combine r1 and r2
+// into a new region that is r1 whenever select would be and r2 otherwise.
 // ie. we can select parts of images for arbitrary combinations,
 // cropping etc.
 let cond : Region -> Region -> Region -> Region =
@@ -121,62 +120,3 @@ let (</>) : Region -> Region -> Region =
 let shiftXor (dx : float) : bool Filter =
   let shift d = translate (d,0.0)
   fun reg -> xorR (shift dx reg) (shift (-dx) reg)
-
-(* konkretisering; fra abstrakt billede til bitmap *)
-let regionToBitmap scale width height origoAnchor (img : Region) =
-  // anchor (0,0) at center or top left
-  let anchor (x,y) =
-    match origoAnchor with
-    | BitmapUtil.Center -> (x - width/2, y - height/2)
-    | BitmapUtil.TopLeft -> (x,y)
-
-  // construct bitmap
-  let bmp = BitmapUtil.bmp (width, height)
-  for x in [0..width-1] do
-    for y in [0..height-1] do
-      let ax, ay = anchor (x,y)
-      // apply scale
-      let p_x = float ax * scale / float width
-      let p_y = float ay * scale / float height
-      let color = img (p_x, p_y) |> BitmapUtil.boolToColor
-      in BitmapUtil.setPixel color (x,y) bmp
-  bmp
-
-// shiftXor 2.6 altRings
-// swirl 333.0 (shiftXor 2.6 altRings)
-// swirl 150.0 (shiftXor 2.6 altRings)
-// shiftXor 2.6 altRings
-// cond (fun (x,y) -> (y - x) < 0.0) checker (swirl -33.3 checker)
-// |> regionToBitmap 20.0 600 600 Center
-// |> regionToBitmap 400.0 600 600 TopLeft
-// |> toPngFile "test.png"
-// printfn "File written: 'test.png'"
-
-// Animationer
-type Time = float
-type 'a Animation = Time -> 'a Image
-// Write multiple images
-printfn "Generating images..."
-let anim : bool Animation =
-  fun dt -> shiftXor (0.0 + dt) altRings
-
-let generateImgi =
-  fun i ->
-    anim (float i * 0.05)
-    |> regionToBitmap 400.0 600 600 TopLeft
-
-let images = Array.Parallel.init 80 generateImgi
-
-printfn "Writing images to disk..."
-Array.iteri (fun i img -> toPngFile (sprintf "test%02i.png" i) img) images
-
-// ImageMagick for gif generation
-printfn "Creating gif with ImageMagick..."
-let makeGif = "-delay 10 -loop 0 test*.png test.gif"
-let patrolCycle =  "test.gif -coalesce -duplicate 1,-2-1 -quiet -layers OptimizePlus  -loop 0 test.gif"
-let convert cmd =
-  use p = System.Diagnostics.Process.Start("convert", cmd)
-  p.WaitForExit()
-convert makeGif
-// convert patrolCycle
-printfn "File written: test.gif"
