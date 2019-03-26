@@ -31,3 +31,21 @@ let generateImgi =
   fun i ->
     anim (float i * 0.05)
     |> regionToBitmap 10.0 600 600 TopLeft
+
+wormhole.gif
+gen: dt: 0.05, scale: 20.0, anchor: Center
+let anim : bool Animation =
+  fun dt -> swirl (0.0 + dt) checker
+let generateImgi =
+  fun i ->
+    anim (float i * 0.05)
+    |> regionToBitmap 20.0 600 600 Center
+
+animation_test.gif
+gen: dt: 0.05, scale: 20.0, anchor: Center
+let anim : bool Animation =
+  fun dt -> cond (fun (x,y) -> (y - x + dt) < 0.0) checker (swirl (-33.3 + dt) checker)
+let generateImgi =
+  fun i ->
+    anim (float i * 0.05)
+    |> regionToBitmap 20.0 600 600 Center
