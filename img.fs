@@ -77,13 +77,19 @@ let swirl radius : 'a Filter =
 // lets us apply an operation (function op) pointwise on one or
 // more function values
 // pointwise operations: https://en.wikipedia.org/wiki/Pointwise
-let lift1 (op : 'a -> 'b) (f : 'p -> 'a) : 'p -> 'b =
+
+// definition of operations with arity 1-3
+type unaryOp<'a,'b> = ('a -> 'b)
+type binaryOp<'a,'b,'c> = ('a -> 'b -> 'c)
+type ternaryOp<'a,'b,'c,'d> = ('a -> 'b -> 'c -> 'd)
+
+let lift1 (op : unaryOp<'a,'b>) (f : 'p -> 'a) : 'p -> 'b =
   fun p -> op (f p)
 
-let lift2 (op : 'a -> 'b -> 'c) (f1 : 'p -> 'a) f2 : 'p -> 'c =
+let lift2 (op : binaryOp<'a,'b,'c>) (f1 : 'p -> 'a) f2 : 'p -> 'c =
   fun p -> op (f1 p) (f2 p)
 
-let lift3 (op : 'a -> 'b -> 'c -> 'd) (f1 : 'p -> 'a) f2 f3 : 'p -> 'd =
+let lift3 (op : ternaryOp<'a,'b,'c,'d>) (f1 : 'p -> 'a) f2 f3 : 'p -> 'd =
   fun p -> op (f1 p) (f2 p) (f3 p)
 
 // the cond operator is quite powerful:
