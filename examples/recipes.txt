@@ -49,3 +49,12 @@ let generateImgi =
   fun i ->
     anim (float i * 0.05)
     |> regionToBitmap 20.0 600 600 Center
+
+checker_room.gif
+gen: dt: unused, scale: variable, anchor: TopLeft
+let anim : bool Animation =
+  fun dt -> shiftXor (33.3) altRings
+let generateImgi =
+  fun i ->
+    anim 0.0
+    |> regionToBitmap (200.0 - 2.5 * float i) 600 600 TopLeft
