@@ -3,8 +3,8 @@ module BitmapUtil
 open System.Drawing
 
 (* color *)
-let fromArgb (a:int, r:int, g:int, b:int) : Color =
-  Color.FromArgb(a,r,g,b)
+let fromARGB (a:int, r:int, g:int, b:int) : Color =
+  Color.FromArgb(a, r, g, b)
 
 let boolToColor (c : bool) : Color =
   if c then Color.Black

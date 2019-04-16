@@ -97,7 +97,7 @@ let lift3 (op : ternaryOp<'a,'b,'c,'d>) (f1 : 'p -> 'a) f2 f3 : 'p -> 'd =
 // into a new region that is r1 whenever select would be and r2 otherwise.
 // ie. we can select parts of images for arbitrary combinations,
 // cropping etc.
-let cond : Region -> Region -> Region -> Region =
+let cond<'a> : Region -> 'a Image -> 'a Image -> 'a Image =
   lift3 (fun select r1 r2 -> if select then r1 else r2)
 
 (* Region algebra *)
@@ -126,3 +126,70 @@ let (</>) : Region -> Region -> Region =
 let shiftXor (dx : float) : bool Filter =
   let shift d = translate (d,0.0)
   fun reg -> xorR (shift dx reg) (shift (-dx) reg)
+
+(* color *)
+type Frac = float // float in [0;1]
+// BGRA color. BGR is multiplied by alpha; so alpha is upper bound
+type Color = Frac * Frac * Frac * Frac // Blue Green Red Alpha
+type ImageC = Color Image
+
+let invisible : Color = (0.0, 0.0, 0.0, 0.0)
+let black : Color = (0.0, 0.0, 0.0, 1.0)
+let blue  : Color = (1.0, 0.0, 0.0, 1.0)
+let green : Color = (0.0, 1.0, 0.0, 1.0)
+let red   : Color = (0.0, 0.0, 1.0, 1.0)
+let white : Color = (1.0, 1.0, 1.0, 1.0)
+
+let toARGB ((b, g, r, a) : Color) =
+  let conv x = int (255.0 * x) in
+  conv a, conv r, conv g, conv b
+
+let boolToColor c1 c2 b = if b then c1 else c2
+
+let regionToImageC (img : Region) c1 c2 : ImageC =
+  boolToColor c1 c2 << img
+
+type Interval = struct
+  // endpoints
+  val A : float
+  val B : float
+
+  new (a, b) = { A = a; B = b }
+
+  static member (<?>) (x : float, inter : Interval) =
+    inter.A <= x && x <= inter.B
+  static member (<?>) (p : Point, inter : Interval) =
+    let x = fst p in
+    let y = snd p in
+    x <?> inter && y <?> inter
+end
+
+let imgInterval (inter : Interval) (img : ImageC) : ImageC =
+  fun p -> if p <?> inter then img p else invisible
+
+(* color manipulation *)
+// interpolate between two colors by fractional amount
+let lerpC (weight : Frac) (b1, g1, r1, a1) (b2, g2, r2, a2) : Color =
+  let h x1 x2 = weight * x1 + (1.0 - weight) * x2 in
+  (h b1 b2, h g1 g2, h r1 r2, h a1 a2)
+
+let bilerpC wx wy c1 c2 c3 c4 : Color =
+  let lerpa = lerpC wx c1 c2 in
+  let lerpb = lerpC wx c3 c4 in
+  lerpC wy lerpa lerpb
+
+let lighten w : Color -> Color =
+  lerpC w white
+
+let darken w : Color -> Color =
+  lerpC w black
+
+let fade w : Color -> Color =
+  lerpC w invisible
+
+(* color images *)
+// gradients defined for x in [0,1] and y in [0,1]
+let gradient c1 c2 : ImageC =
+  fun (x,y) -> lerpC x c1 c2
+let gradient2D c1 c2 c3 c4 : ImageC =
+  fun (x,y) -> bilerpC x y c1 c2 c3 c4
