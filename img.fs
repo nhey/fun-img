@@ -128,9 +128,13 @@ let shiftXor (dx : float) : bool Filter =
   fun reg -> xorR (shift dx reg) (shift (-dx) reg)
 
 (* color *)
-type Frac = float // float in [0;1]
+// a Frac is a float in [0;1]
+let bound a b x = max a <| x |> min b
+type Frac = float
+let frac = bound 0.0 1.0
 // BGRA color. BGR is multiplied by alpha; so alpha is upper bound
 type Color = Frac * Frac * Frac * Frac // Blue Green Red Alpha
+let color (b,g,r,a) = frac b, frac g, frac r, frac a
 type ImageC = Color Image
 
 let invisible : Color = (0.0, 0.0, 0.0, 0.0)
@@ -149,6 +153,7 @@ let boolToColor c1 c2 b = if b then c1 else c2
 let regionToImageC (img : Region) c1 c2 : ImageC =
   boolToColor c1 c2 << img
 
+(* bounding images *)
 type Interval = struct
   // endpoints
   val A : float
@@ -163,8 +168,11 @@ type Interval = struct
     let y = snd p in
     x <?> inter && y <?> inter
 end
+let inter a b = new Interval (a,b)
+let fracs = inter 0.0 1.0
 
-let imgInterval (inter : Interval) (img : ImageC) : ImageC =
+// only color image for subset of points (x,y in interval)
+let imgBound (inter : Interval) (img : ImageC) : ImageC =
   fun p -> if p <?> inter then img p else invisible
 
 (* color manipulation *)
@@ -189,7 +197,14 @@ let fade w : Color -> Color =
 
 (* color images *)
 // gradients defined for x in [0,1] and y in [0,1]
+let gradientUnbound c1 c2 : ImageC =
+  fun (x,y) -> lerpC (frac x) c1 c2
 let gradient c1 c2 : ImageC =
-  fun (x,y) -> lerpC x c1 c2
+  gradientUnbound c1 c2
+  |> imgBound fracs
+
+let gradient2DUnbound c1 c2 c3 c4 : ImageC =
+  fun (x,y) -> bilerpC (frac x) (frac y) c1 c2 c3 c4
 let gradient2D c1 c2 c3 c4 : ImageC =
-  fun (x,y) -> bilerpC x y c1 c2 c3 c4
+  gradient2DUnbound c1 c2 c3 c4
+  |> imgBound fracs
